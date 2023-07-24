@@ -179,7 +179,7 @@ def create_folium_map(stations_close_municipality, center, comune):
     for _, row in stations_close_municipality.iterrows():
         
         data_dict = {
-            'Price': [row['Bandiera']],
+            'Price': [row['prezzo']],
             'Address': [' '.join(row['Indirizzo'].lower().capitalize().split()[:-1])],
             'Comune': [row['Comune'].lower().capitalize()], 
             'Cap': [row['Indirizzo'].split()[-1]]
