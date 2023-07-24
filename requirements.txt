@@ -60,7 +60,7 @@ munkres==1.1.4
 nest-asyncio==1.5.6
 networkx==3.1
 numexpr==2.8.4
-numpy==1.23.5
+numpy
 packaging==22.0
 pandas==1.5.2
 parso==0.8.3
