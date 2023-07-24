@@ -111,6 +111,7 @@ dependencies:
   - parso=0.8.3=pyhd8ed1ab_0
   - pcre=8.45=hd77b12b_0
   - pickleshare=0.7.5=py_1003
+  - pip==23.1.2
   - pillow=9.3.0=py310hd77b12b_2
   - platformdirs=3.8.0=pyhd8ed1ab_0
   - plotly=5.9.0=py310haa95532_0
