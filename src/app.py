@@ -35,19 +35,19 @@ def create_feather(df, save_path):
         
 def download_data():
     link_price = 'https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv'
-    path_price = 'data/raw/price_at_8am.csv'
+    path_price = '../data/raw/price_at_8am.csv'
 
     link_gas_station = 'https://www.mimit.gov.it/images/exportCSV/anagrafica_impianti_attivi.csv'
-    path_gas_station = 'data/raw/data_gas_station.csv'
+    path_gas_station = '../data/raw/data_gas_station.csv'
 
     link_geospatial_reference_istat = 'https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv'
-    path_geospatial_reference_istat = 'data/raw/geospatial_reference.csv'
+    path_geospatial_reference_istat = '../data/raw/geospatial_reference.csv'
 
     get_data_and_save(link_price, path_price)
     get_data_and_save(link_gas_station, path_gas_station)
     get_data_and_save(link_geospatial_reference_istat, path_geospatial_reference_istat)
 
-    with open('data/raw/data_gas_station.csv', 'r', encoding='utf-8') as f:
+    with open('../data/raw/data_gas_station.csv', 'r', encoding='utf-8') as f:
         text = csv.reader(f, delimiter=';')
         next(text)
         
@@ -66,7 +66,7 @@ def download_data():
                 modified_rows.append(row)
 
         # Save the new file 
-        with open('data/interim/data_gas_station.csv', 'w', encoding='utf-8', newline='') as f:
+        with open('../data/interim/data_gas_station.csv', 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
             
             writer.writerows(modified_rows)
@@ -74,33 +74,33 @@ def download_data():
         f.close()
         
     # Create GeoJson file 
-    gas_station = pd.read_csv('data/interim/data_gas_station.csv')
+    gas_station = pd.read_csv('../data/interim/data_gas_station.csv')
         
     price = (
         pd.read_csv
-        ('data/raw/price_at_8am.csv', 
+        ('../data/raw/price_at_8am.csv', 
         delimiter=';', 
         skiprows=1, 
         parse_dates=['dtComu'])
     )
 
     merge_df = price.merge(gas_station, on='idImpianto')
-    create_feather(merge_df, 'data/processed/final_gas_station.feather')
+    create_feather(merge_df, '../data/processed/final_gas_station.feather')
 
 
     # Extract administrative boundaries (shp files)
-    if not os.path.exists('data/processed/final_comuni.feather'):
+    if not os.path.exists('../data/processed/final_comuni.feather'):
         link = 'https://www.istat.it/storage/cartografia/confini_amministrativi/generalizzati/2023/Limiti01012023_g.zip'
         response = requests.get(link)
 
         with zipfile.ZipFile(io.BytesIO(response.content), 'r') as zip_file:
-            zip_file.extractall('data/raw/comuni')
+            zip_file.extractall('../data/raw/comuni')
             
         comuni = gpd.read_file(r'data\raw\comuni\Limiti01012023_g\Com01012023_g\Com01012023_g_WGS84.shp')
-        to_geofeather(comuni, 'data/processed/final_comuni.feather')
+        to_geofeather(comuni, '../data/processed/final_comuni.feather')
 
     # Save the description of istat's geospatial description.
-    with open('data/processed/geospatial_reference.csv', 'w', encoding='utf-8', newline='') as f:
+    with open('../data/processed/geospatial_reference.csv', 'w', encoding='utf-8', newline='') as f:
         writer = csv.writer(f)
     
 
@@ -110,8 +110,8 @@ def load_data():
     
     download_data()
     
-    geodf = from_geofeather('data/processed/final_gas_station.feather')
-    comuni = from_geofeather('data/processed/final_comuni.feather')
+    geodf = from_geofeather('../data/processed/final_gas_station.feather')
+    comuni = from_geofeather('../data/processed/final_comuni.feather')
     
     mapping = {
     'Ã¹': 'ù',
@@ -177,7 +177,16 @@ def create_folium_map(stations_close_municipality, center, comune):
     fg.add_child(comune_layer_geojson)
     
     for _, row in stations_close_municipality.iterrows():
-        popup = f'Price: {row["prezzo"]}\nAddress: {row["Indirizzo"].lower().capitalize()}\nComune: {row["Comune"].lower().capitalize()}'
+        
+        data_dict = {
+            'Price': [row['Bandiera']],
+            'Address': [' '.join(row['Indirizzo'].lower().capitalize().split()[:-1])],
+            'Comune': [row['Comune'].lower().capitalize()], 
+            'Cap': [row['Indirizzo'].split()[-1]]
+        }
+        popup_df = pd.DataFrame(data_dict)
+        popup = popup_df.to_html(index=False, classes='table table-striped table-hover')
+        
         fg.add_child(
             folium.CircleMarker([row['Latitudine'], 
                             row['Longitudine']],
@@ -200,7 +209,7 @@ if __name__ == '__main__':
     
     st.title("It's time to save money :sunglasses:")
     st.divider()
-    st.subheader("This project aims to find the best oil station where to get petrol in a location of your choice:fuelpump:",
+    st.subheader("This project aims to find the best petrol station where to get petrol in a location of your choice:fuelpump:",
                 help="It works only in Italy")
     st.divider()
     
@@ -239,7 +248,11 @@ if __name__ == '__main__':
             'Comune' : 'Municipality',
             'Indirizzo' : 'Address',
             'dtComu' : 'Date'
-        })
+        }, 
+        hide_index=True)
+    
+    
+    
 
     # Create the folium map 
     # map_price = create_folium_map(stations_close_municipality, center)
