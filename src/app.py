@@ -247,4 +247,4 @@ if __name__ == '__main__':
     map_price, fg, location = create_folium_map(stations_close_municipality, center, comune)
     st_data = st_folium(map_price, feature_group_to_add=fg, center=location, width = 725, zoom=12)
     
-    st.caption('Racoons are too cute :raccoon::raccoon:')
+    st.caption('Racoons :raccoon::raccoon:')
