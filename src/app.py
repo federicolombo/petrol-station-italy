@@ -209,7 +209,7 @@ if __name__ == '__main__':
     
     st.title("It's time to save money :sunglasses:")
     st.divider()
-    st.subheader("This project aims to find the best petrol station where to get petrol in a location of your choice:fuelpump:",
+    st.subheader("This project aims to find the best petrol station in a location of your choice:fuelpump:",
                 help="It works only in Italy")
     st.divider()
     
@@ -258,6 +258,6 @@ if __name__ == '__main__':
     # map_price = create_folium_map(stations_close_municipality, center)
     # st_data = st_folium(map_price, width = 725)
     map_price, fg, location = create_folium_map(stations_close_municipality, center, comune)
-    st_data = st_folium(map_price, feature_group_to_add=fg, center=location, width = 725, zoom=12)
+    st_data = st_folium(map_price, feature_group_to_add=fg, center=location, width = 650, height=500, zoom=12)
     
     st.caption('Racoons :raccoon::raccoon:')
