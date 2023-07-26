@@ -129,7 +129,7 @@ def load_data():
 
 # Find the polygon and the centroid 
 def closest_stations(name_municipality, self_service, type_fuel):
-    comune = comuni.loc[comuni.COMUNE.str.startswith(name_municipality)].copy()
+    comune = comuni.loc[comuni.COMUNE == name_municipality].copy()
     center = comune.geometry.centroid
     center = center.to_crs('EPSG:4326')
 
