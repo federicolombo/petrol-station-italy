@@ -13,201 +13,242 @@ import csv
 import geofeather
 import os 
 
-# Get and save data from the gas stations and the daily oil price 
-def get_data_and_save(link: str, path: str) -> None:
+
+class PetrolApp:
+
+    base_dir = os.path.dirname(os.getcwd())
+    path_price = os.path.join(base_dir, 'data/raw/price_at_8am.csv')
+    path_gas_station = os.path.join(base_dir, 'data/raw/data_gas_station.csv')
+    path_geospatial_reference_istat = os.path.join(base_dir, 'data/raw/geospatial_reference.csv')
+    path_interim_gas_station = os.path.join(base_dir, 'data/interim/data_gas_station.csv')
+    path_gas_station_feather = os.path.join(base_dir,'data/processed/final_gas_station.feather')
+    path_comuni_feather = os.path.join(base_dir,'data/processed/final_comuni.feather')
+    path_processed_geospatial_reference = os.path.join(base_dir,'data/processed/geospatial_reference.csv')
+    path_comuni_raw = os.path.join(base_dir, 'data/raw/comuni')
     
-    response = requests.get(link)
     
-    with open(path, 'w', encoding='utf-8', newline='') as f:
+    def __init__(self, link_price, link_gas_station, link_geospatial_reference_istat, link_municipality) -> None:
+        self.link_price = link_price 
+        self.link_gas_station = link_gas_station 
+        self.link_geospatial_reference_istat = link_geospatial_reference_istat 
+        self.link_municipality = link_municipality    
+
+
+    def get_data_and_save(self, link: str, path: str) -> None:
+        '''
+        Make url request to get data and save the text into a file.
+        '''
         
-        f.write(response.text)
-        f.close()
-        
-
-# Create GeoJSON file
-def create_feather(df, save_path):
-    df_geo = df.copy()      
-    df_geo['geometry'] = gpd.points_from_xy(df_geo.Longitudine, df_geo.Latitudine)
-    df_geo = gpd.GeoDataFrame(df_geo, crs='EPSG:4326')
-    geofeather.to_geofeather(df_geo, save_path)
-    
-        
-        
-def download_data():
-    link_price = 'https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv'
-    path_price = 'data/raw/price_at_8am.csv'
-
-    link_gas_station = 'https://www.mimit.gov.it/images/exportCSV/anagrafica_impianti_attivi.csv'
-    path_gas_station = 'data/raw/data_gas_station.csv'
-
-    link_geospatial_reference_istat = 'https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv'
-    path_geospatial_reference_istat = 'data/raw/geospatial_reference.csv'
-
-    get_data_and_save(link_price, path_price)
-    get_data_and_save(link_gas_station, path_gas_station)
-    get_data_and_save(link_geospatial_reference_istat, path_geospatial_reference_istat)
-
-    with open('data/raw/data_gas_station.csv', 'r', encoding='utf-8') as f:
-        text = csv.reader(f, delimiter=';')
-        next(text)
-        
-        modified_rows = []
-        
-        for row in text:
-            if len(row) == 11: 
-                row[-5] = row[-4]
-                row[-4] = row[-3]
-                row[-3] = row[-2]
-                row[-2] = row[-1]
-                row.pop()
-                modified_rows.append(row)
-                print(f'Modify this row: {row}')
-            elif len(row) > 11:
-                pass
-            else:
-                modified_rows.append(row)
-
-        # Save the new file 
-        with open('data/interim/data_gas_station.csv', 'w', encoding='utf-8', newline='') as f:
-            writer = csv.writer(f)
-            
-            writer.writerows(modified_rows)
-
-        f.close()
-        
-    # Create GeoJson file 
-    gas_station = pd.read_csv('data/interim/data_gas_station.csv')
-        
-    price = (
-        pd.read_csv
-        ('data/raw/price_at_8am.csv', 
-        delimiter=';', 
-        skiprows=1, 
-        parse_dates=['dtComu'])
-    )
-
-    merge_df = price.merge(gas_station, on='idImpianto')
-    create_feather(merge_df, 'data/processed/final_gas_station.feather')
-
-
-    # Extract administrative boundaries (shp files)
-    if not os.path.exists('data/processed/final_comuni.feather'):
-        link = 'https://www.istat.it/storage/cartografia/confini_amministrativi/generalizzati/2023/Limiti01012023_g.zip'
         response = requests.get(link)
-
-        with zipfile.ZipFile(io.BytesIO(response.content), 'r') as zip_file:
-            zip_file.extractall('data/raw/comuni')
+        
+        with open(path, 'w', encoding='utf-8', newline='') as f:
             
-        comuni = gpd.read_file(r'data\raw\comuni\Limiti01012023_g\Com01012023_g\Com01012023_g_WGS84.shp')
-        to_geofeather(comuni, 'data/processed/final_comuni.feather')
+            f.write(response.text)
+            f.close()
 
-    # Save the description of istat's geospatial description.
-    with open('data/processed/geospatial_reference.csv', 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f)
-    
+        
+    def create_feather(self, df, save_path):
+        '''
+        Create a feather file from a GeoJSON dataframe.
+        '''
+        
+        df_geo = df.copy()      
+        df_geo['geometry'] = gpd.points_from_xy(df_geo.Longitudine, df_geo.Latitudine)
+        df_geo = gpd.GeoDataFrame(df_geo, crs='EPSG:4326')
+        geofeather.to_geofeather(df_geo, save_path)
+            
+            
+    def download_data(self):
+        '''
+        Get data from the links and save the results in csv files. Then it modifies rows with not standard values.
+        '''
+        self.get_data_and_save(link_price, self.path_price)
+        self.get_data_and_save(link_gas_station, self.path_gas_station)
+        self.get_data_and_save(link_geospatial_reference_istat, self.path_geospatial_reference_istat)
 
+        with open(self.path_gas_station, 'r', encoding='utf-8') as f:
+            text = csv.reader(f, delimiter=';')
+            next(text)
+            
+            modified_rows = []
+            
+            for row in text:
+                if len(row) == 11: 
+                    row[-5] = row[-4]
+                    row[-4] = row[-3]
+                    row[-3] = row[-2]
+                    row[-2] = row[-1]
+                    row.pop()
+                    modified_rows.append(row)
+                    print(f'Modify this row: {row}')
+                elif len(row) > 11:
+                    pass
+                else:
+                    modified_rows.append(row)
 
-@st.cache_data
-def load_data():
-    
-    download_data()
-    
-    geodf = from_geofeather('data/processed/final_gas_station.feather')
-    comuni = from_geofeather('data/processed/final_comuni.feather')
-    
-    mapping = {
-    'Ã¹': 'ù',
-    'Ã²': 'ò',
-    'Ã¨': 'è',
-    'Ã©': 'é',
-    'Ã ': 'à',
-    'Ã¬': 'ì'
-}
+            # Save the new file 
+            with open(self.path_interim_gas_station, 'w', encoding='utf-8', newline='') as f:
+                writer = csv.writer(f)
+                
+                writer.writerows(modified_rows)
 
-    comuni.COMUNE = comuni.COMUNE.replace(mapping, regex=True)
-    
-    return geodf, comuni 
-
-
-# Find the polygon and the centroid 
-def closest_stations(name_municipality, self_service, type_fuel):
-    comune = comuni.loc[comuni.COMUNE == name_municipality].copy()
-    center = comune.geometry.centroid
-    center = center.to_crs('EPSG:4326')
-
-    target_lon_circle, target_lat_circle = center.geometry.x.item(), center.geometry.y.item()
-    target_point_circle = gpd.GeoDataFrame(geometry=[Point(target_lon_circle, target_lat_circle)], crs='EPSG:4326')
-    target_projected = target_point_circle.to_crs('EPSG:3857') 
-
-    radius_meters = 15000  # Radius in meters
-    buffer_projected = target_projected.buffer(radius_meters)
-    buffer = buffer_projected.to_crs('EPSG:4326')
-
-    if self_service == 'Yes':
-        self_service = 1
-    else:
-        self_service = 0 
-
-    stat_circle = (geodf.loc[(geodf.descCarburante == type_fuel) & (geodf.isSelf == self_service)].
-            within(buffer.geometry.item()))
-    indici = stat_circle.index[stat_circle]
-    closest_station = geodf.loc[indici].sort_values(by='prezzo').copy()
-    
-    return closest_station, center, comune 
-
-# Create the folium map 
-def create_folium_map(stations_close_municipality, center, comune):
-    center_latitude = center.geometry.centroid.y.mean()
-    center_longitude = center.geometry.centroid.x.mean()
-    location = [center_latitude, center_longitude]
-
-    map_price = folium.Map(
-        location=location,
-        zoom_start=12
+            f.close()
+        
+        # Create GeoJson file 
+        gas_station = pd.read_csv(self.path_interim_gas_station)
+            
+        price = (
+            pd.read_csv
+            (self.path_price, 
+            delimiter=';', 
+            skiprows=1, 
+            parse_dates=['dtComu'])
         )
 
-    colormap = folium.LinearColormap(colors=['green', 'red'],
-                                    vmin=stations_close_municipality.prezzo.min(),
-                                    vmax=stations_close_municipality.prezzo.max()
-                                    )
-    
-    colormap.caption = 'The range of fuel prices'    
+        merge_df = price.merge(gas_station, on='idImpianto')
+        self.create_feather(merge_df, self.path_gas_station_feather)
 
-    comune_layer_geojson = folium.GeoJson(comune, name='geojson', tooltip=comune['COMUNE'].item()) 
 
-    fg = folium.FeatureGroup(name='markers')
-    fg.add_child(comune_layer_geojson)
-    
-    for _, row in stations_close_municipality.iterrows():
-        
-        data_dict = {
-            'Price': [row['prezzo']],
-            'Address': [' '.join(row['Indirizzo'].lower().capitalize().split()[:-1])],
-            'Comune': [row['Comune'].lower().capitalize()], 
-            'Cap': [row['Indirizzo'].split()[-1]]
-        }
-        popup_df = pd.DataFrame(data_dict)
-        popup = popup_df.to_html(index=False, classes='table table-striped table-hover')
-        
-        fg.add_child(
-            folium.CircleMarker([row['Latitudine'], 
-                            row['Longitudine']],
-                            radius=9,
-                            color=colormap(row['prezzo']),
-                            fill=True, 
-                            fill_opacity=0.7,
-                            popup=popup,
-                            tooltip=f"{row['prezzo']}%s"%(u"\N{euro sign}"))
-        )
+        # Extract administrative boundaries (shp files)
+        if not os.path.exists(self.path_comuni_feather):
+            response = requests.get(self.link_municipality)
+
+            with zipfile.ZipFile(io.BytesIO(response.content), 'r') as zip_file:
+                zip_file.extractall(self.path_comuni_raw)
+                
+            comuni = gpd.read_file(r'data\raw\comuni\Limiti01012023_g\Com01012023_g\Com01012023_g_WGS84.shp')
+            to_geofeather(comuni, self.path_comuni_feather)
+
+        # Save the description of istat's geospatial description.
+        with open(self.path_processed_geospatial_reference, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f)
         
 
-    # fg.add_child(colormap)
-    colormap.add_to(map_price)
-    return map_price, fg, location
+    @st.cache_data
+    def load_data(_self):
+        '''
+        It calls download_data to save all the files in the right 'data/..' directory.
+        Then it loads the files and returns the two dataframes: geodf, comuni. 
+        Geodf is a GeoJSON that contains all the informations of petrol stations. 
+        Comuni is a Pandas.DataFrame where are listed all the italian municipalities.    
+        '''
+        
+        _self.download_data()
+        
+        geodf = from_geofeather(_self.path_gas_station_feather)
+        comuni = from_geofeather(_self.path_comuni_feather)
+        
+        mapping = {
+        'Ã¹': 'ù',
+        'Ã²': 'ò',
+        'Ã¨': 'è',
+        'Ã©': 'é',
+        'Ã ': 'à',
+        'Ã¬': 'ì'
+    }
+
+        comuni.COMUNE = comuni.COMUNE.replace(mapping, regex=True)
+        
+        return geodf, comuni 
+
+
+    # Find the polygon and the centroid 
+    def closest_stations(self, name_municipality, self_service, type_fuel):
+        '''
+        Given an italian municipality, the type of service and the type of fuel, it will return 
+        the closest stations within a circle with a radius of 15 km, the centroid of the municipality you passed
+        and the DataFrame's row of the munipality. 
+        '''
+        
+        comune = comuni.loc[comuni.COMUNE == name_municipality].copy()
+        center = comune.geometry.centroid
+        center = center.to_crs('EPSG:4326')
+
+        target_lon_circle, target_lat_circle = center.geometry.x.item(), center.geometry.y.item()
+        target_point_circle = gpd.GeoDataFrame(geometry=[Point(target_lon_circle, target_lat_circle)], crs='EPSG:4326')
+        target_projected = target_point_circle.to_crs('EPSG:3857') 
+
+        radius_meters = 15000  # Radius in meters
+        buffer_projected = target_projected.buffer(radius_meters)
+        buffer = buffer_projected.to_crs('EPSG:4326')
+
+        if self_service == 'Yes':
+            self_service = 1
+        else:
+            self_service = 0 
+
+        stat_circle = (geodf.loc[(geodf.descCarburante == type_fuel) & (geodf.isSelf == self_service)].
+                within(buffer.geometry.item()))
+        indici = stat_circle.index[stat_circle]
+        closest_stations = geodf.loc[indici].sort_values(by='prezzo').copy()
+        
+        return closest_stations, center, comune 
+
+
+    def create_folium_map(self, stations_close_municipality, center, comune):
+        '''
+        Create the folium map with a geojson layer of the municipality, 
+        all the closest stations with a color from red to green based on its price
+        '''
+        
+        center_latitude = center.geometry.centroid.y.mean()
+        center_longitude = center.geometry.centroid.x.mean()
+        location = [center_latitude, center_longitude]
+
+        map_price = folium.Map(
+            location=location,
+            zoom_start=12
+            )
+
+        colormap = folium.LinearColormap(colors=['green', 'red'],
+                                        vmin=stations_close_municipality.prezzo.min(),
+                                        vmax=stations_close_municipality.prezzo.max()
+                                        )
+        
+        colormap.caption = 'The range of fuel prices'    
+
+        comune_layer_geojson = folium.GeoJson(comune, name='geojson', tooltip=comune['COMUNE'].item()) 
+
+        fg = folium.FeatureGroup(name='markers')
+        fg.add_child(comune_layer_geojson)
+        
+        for _, row in stations_close_municipality.iterrows():
+            
+            data_dict = {
+                'Price': [row['prezzo']],
+                'Address': [' '.join(row['Indirizzo'].lower().capitalize().split()[:-1])],
+                'Comune': [row['Comune'].lower().capitalize()], 
+                'Cap': [row['Indirizzo'].split()[-1]]
+            }
+            popup_df = pd.DataFrame(data_dict)
+            popup = popup_df.to_html(index=False, classes='table table-striped table-hover')
+            
+            fg.add_child(
+                folium.CircleMarker([row['Latitudine'], 
+                                row['Longitudine']],
+                                radius=9,
+                                color=colormap(row['prezzo']),
+                                fill=True, 
+                                fill_opacity=0.7,
+                                popup=popup,
+                                tooltip=f"{row['prezzo']}%s"%(u"\N{euro sign}"))
+            )
+            
+
+        colormap.add_to(map_price)
+        return map_price, fg, location
 
 
 
 if __name__ == '__main__':
+    
+    
+    link_price = 'https://www.mimit.gov.it/images/exportCSV/prezzo_alle_8.csv'
+    link_gas_station = 'https://www.mimit.gov.it/images/exportCSV/anagrafica_impianti_attivi.csv'
+    link_geospatial_reference_istat = 'https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.csv'
+    link_municipality = 'https://www.istat.it/storage/cartografia/confini_amministrativi/generalizzati/2023/Limiti01012023_g.zip'
+    
+    app = PetrolApp(link_price, link_gas_station, link_geospatial_reference_istat, link_municipality)
     
     st.title("It's time to save money :sunglasses:")
     st.divider()
@@ -218,7 +259,7 @@ if __name__ == '__main__':
 
     
     data_load_state = st.text('Loading data...')
-    geodf, comuni = load_data()
+    geodf, comuni = app.load_data()
     data_load_state.text('Loading data...done!')
 
     list_comuni = comuni.COMUNE.sort_values()
@@ -236,7 +277,7 @@ if __name__ == '__main__':
         type_fuel = st.selectbox('Select the type of fuel', list_carburante)
     
     
-    stations_close_municipality, center, comune = closest_stations(name_municipality, self_service, type_fuel)
+    stations_close_municipality, center, comune = app.closest_stations(name_municipality, self_service, type_fuel)
 
     st.write(f'These are the cheapest oil stations closest to {name_municipality}')
     
@@ -254,12 +295,7 @@ if __name__ == '__main__':
         hide_index=True)
     
     
-    
-
-    # Create the folium map 
-    # map_price = create_folium_map(stations_close_municipality, center)
-    # st_data = st_folium(map_price, width = 725)
-    map_price, fg, location = create_folium_map(stations_close_municipality, center, comune)
+    map_price, fg, location = app.create_folium_map(stations_close_municipality, center, comune)
 
     st_data = st_folium(map_price, feature_group_to_add=fg, center=location, zoom=12, width = 725, height=400)
     
