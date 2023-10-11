@@ -16,7 +16,8 @@ import os
 
 class PetrolApp:
 
-    base_dir = os.path.dirname(os.getcwd())
+    absPath = os.path.abspath(__file__)
+    base_dir = os.path.dirname(os.path.dirname(absPath))
     path_price = os.path.join(base_dir, 'data/raw/price_at_8am.csv')
     path_gas_station = os.path.join(base_dir, 'data/raw/data_gas_station.csv')
     path_geospatial_reference_istat = os.path.join(base_dir, 'data/raw/geospatial_reference.csv')
