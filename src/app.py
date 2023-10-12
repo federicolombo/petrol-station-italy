@@ -125,7 +125,7 @@ class PetrolApp:
             writer = csv.writer(f)
         
 
-    @st.cache_data
+    @st.cache_data(ttl=43200)
     def load_data(_self):
         '''
         It calls download_data to save all the files in the right 'data/..' directory.
