@@ -291,9 +291,10 @@ if __name__ == '__main__':
             'Bandiera' : 'Company',
             'Comune' : 'Municipality',
             'Indirizzo' : 'Address',
-            'dtComu' : 'Date'
+            'dtComu' : 'Last Update'
         }, 
-        hide_index=True)
+        hide_index=True, 
+        width=725)
     
     
     map_price, fg, location = app.create_folium_map(stations_close_municipality, center, comune)
