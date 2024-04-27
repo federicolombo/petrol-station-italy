@@ -68,7 +68,7 @@ class PetrolApp:
         self.get_data_and_save(link_geospatial_reference_istat, self.path_geospatial_reference_istat)
 
         with open(self.path_gas_station, 'r', encoding='utf-8') as f:
-            text = csv.reader(f, delimiter=';')
+            text = csv.reader(f, delimiter=';', )
             next(text)
             
             modified_rows = []
@@ -82,6 +82,13 @@ class PetrolApp:
                     row.pop()
                     modified_rows.append(row)
                     print(f'Modify this row: {row}')
+                
+                if not (row[8].replace(".", "")).isnumeric() or not (row[9].replace(".", "").isnumeric()):
+                    if row[8].startswith("Lat"):
+                        modified_rows.append(row)
+                    else:
+                        pass
+                    
                 elif len(row) > 11:
                     pass
                 else:
